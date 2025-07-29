@@ -1,4 +1,5 @@
 #include "pso.h"
+#include "calc_energy.h"
 
 int main(void) {
   const int natoms = 3;
@@ -14,7 +15,8 @@ int main(void) {
   bool verbose = false;
   settings_loss_fct slf;
   init_settings_loss_fct(&slf, natoms, attyp, electronic_temperature, accuracy, max_iter, verbose);
-  double energy = loss_fct(&slf, coord);
+  void* data = &slf;
+  double energy = calc_energy(coord, data);
   printf("GFN2-xTB single-point energy (H2O): %.10f Eh\n", energy);
 
   double lb[] = {
@@ -28,10 +30,14 @@ int main(void) {
     1.0, 1.0, 1.0
   };
 
-  // instead of x,y,z --> one 3D structure and optimize the length and angle to the adjacent atoms
-  // PSO optimizes length and angle of binding; Calculate x,y,z coordinates based on length and angle --> call xtb
-  // dont optimize the atoms but the bindings
-  pso(lb, ub, 1000, 40, 9, -100, attyp, &slf, 1235);
+  Result res = {0};
+  pso(lb, ub, 1000, 40, 9, -100, data, calc_energy, 1235, &res);
+
+  printf("[");
+  for (int i = 0; i < (natoms*3); i++) {
+    printf("%0.1f, ", res.parameters[i]);
+  }
+  printf("]\n");
 
   destroy_settings_loss_fct(&slf);
   return EXIT_SUCCESS;
