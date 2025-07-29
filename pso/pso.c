@@ -137,7 +137,7 @@ void update_swarm(Swarm*s, double w, double cog, double soc) {
   for (int i = 0; i < s->npop; i++) {
     int* current_neighborhood = &s->neighborhood[i * s->K];
     int best_particle = find_best_particle_in_neighborhood(s, i, current_neighborhood);
-    double* local_best = &s->swarm[best_particle * s->npar];
+    double* local_best = &s->swarm_bests_params[best_particle * s->npar];
     double* swarm_bests_params = &s->swarm_bests_params[i * s->npar];
     double* v_i = &s->v[i * s->npar];
     double* swarm_i = &s->swarm[i * s->npar];
@@ -226,7 +226,8 @@ void pso(double* lb, double* ub,
       no_improvement++;
     }
     iter++;
-    printf("%.10f  %0.10f\n", global_best_error, s->swarm_errors[global_best]);
+    printf("Generation: %d, global best: %.10f  current best: %0.10f\n",
+           iter, global_best_error, s->swarm_errors[global_best]);
   }
 
   double* best_params = &s->swarm[global_best*s->npar];
