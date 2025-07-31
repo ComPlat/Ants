@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   };
 
   Result res = {0};
-  pso(lb, ub, 500, 40, 9, -100, data, calc_energy, 1235, &res);
+  pso(lb, ub, 1000, 40, 9, -100, data, calc_energy, 1235, &res);
 
   printf("[");
   for (int i = 0; i < (natoms*3); i++) {

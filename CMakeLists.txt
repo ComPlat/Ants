@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
-project(Ants C)
+project(Ants)
 
+# calc energy
 add_library(calc_energy STATIC xtb/calc_energy.c)
 target_include_directories(calc_energy
   PUBLIC
@@ -16,12 +17,14 @@ target_link_libraries(calc_energy
   xtb gfortran m
 )
 
+# mersenne twister
 add_library(random STATIC random/mersenne_twister.c)
 target_include_directories(random
   PUBLIC
   ${CMAKE_SOURCE_DIR}/random
 )
 
+# pso
 add_library(pso STATIC pso/pso.c)
 target_include_directories(pso
   PUBLIC
@@ -33,6 +36,7 @@ target_link_directories(pso
   random
 )
 
+# main
 add_executable(Ants main.c)
 target_include_directories(Ants
   PUBLIC
@@ -52,7 +56,7 @@ target_link_libraries(Ants
   xtb gfortran m
 )
 
-
+# pso tests
 add_executable(pso_tests pso/tests.c)
 target_include_directories(pso_tests
   PUBLIC

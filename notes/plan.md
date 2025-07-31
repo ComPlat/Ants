@@ -2,3 +2,4 @@
 - PSO optimizes length and angle of binding; Calculate x,y,z coordinates based on length and angle
   --> call xtb
 - dont optimize the atoms but the bindings
+
