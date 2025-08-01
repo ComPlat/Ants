@@ -3,3 +3,10 @@
   --> call xtb
 - dont optimize the atoms but the bindings
 
+- Smile to xyz
+  - obabel -:"CCO" -O ethanol.xyz --gen3d
+- obabel input.smi -O output.mol
+  - thereby the atoms and how they are connected to each other is stored
+- construct graph based on connections
+- optimize length, angles and dihedral for each bond
+- traverse graph to reconstruct xyz from bond properties

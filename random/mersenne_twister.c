@@ -129,3 +129,39 @@ double uniform(int seed, bool init) {
   if(init) mt = mersenne_twister(seed);
   return MT_genrand(&mt);
 }
+
+int rand_int(int max, rng_fct rf) {
+  // assumed rf is initialised
+  double u;
+  do {
+    u = rf(0, false);
+  } while ((int)(u * max) >= max);  // redundant but safe
+  return (int)(u * max);
+}
+
+void sample_ints(int max, int k, bool replace, rng_fct rf, int *out) {
+  if (!out) {
+    fprintf(stderr, "buffer out cannot be filled as it is st to NULL\n");
+    exit(EXIT_FAILURE);
+  }
+  if (k > max && !replace) {
+    fprintf(stderr, "Error: Cannot sample %d items from %d without replacement.\n", k, max);
+    exit(EXIT_FAILURE);
+  }
+  if (replace) {
+    for (int i = 0; i < k; ++i) {
+      out[i] = rand_int(max, rf);
+    }
+  } else {
+    int *pool = malloc(max * sizeof(int));
+    for (int i = 0; i < max; ++i) pool[i] = i;
+
+    for (int i = 0; i < k; ++i) {
+      int j = rand_int(max - i, rf);
+      out[i] = pool[j];
+      pool[j] = pool[max - i - 1]; // swap used value to the end
+    }
+
+    free(pool);
+  }
+}

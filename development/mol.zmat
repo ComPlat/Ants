@@ -1,0 +1,14 @@
+!Put Keywords Here, check Charge and Multiplicity.
+#
+
+ mol.xyz
+
+0  1
+C
+C  1  r2
+O  2  r3  1  a3
+Variables:
+r2= 0.0000
+r3= 0.0000
+a3=   -nan
+

@@ -33,5 +33,12 @@ typedef struct {
 
 double uniform(int seed, bool init);
 
+typedef double (*rng_fct)(int seed, bool init);
+
+
+int rand_int(int max, rng_fct rf);
+
+void sample_ints(int max, int k, bool replace, rng_fct rf, int *out);
+
 #endif // ! ANTS_RANDOM_H
 

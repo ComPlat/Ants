@@ -42,7 +42,7 @@ Swarm* init_swarm(int npop, int npar) {
   s->npop = npop;
   s->npar = npar;
   s->size = npop * npar;
-  s->K = 3;
+  s->K = 4;
   s -> size_neighberhood = s->K*s->npop;
 
   s->swarm         = (double*) malloc(s->size * sizeof(double));
@@ -77,11 +77,9 @@ void eval_swarm(Swarm* s, void* user_data, loss_fct lf) {
 void calc_neighberhood(Swarm*s) {
   for (int i = 0; i < s->size_neighberhood; i++) s->neighborhood[i] = -1;
   for (int i = 0; i < s->npop; i++) {
-    int n_neighbors = (int)(uniform(-1, false) * (s->K + 1));
-    for (int j = 0; j < n_neighbors; j++) {
-      // TODO: duplicates are wrong
-      s->neighborhood[(i * s->K) + j] = (int)(uniform(-1, false) * s->npop);
-    }
+    int n_neighbors = rand_int(s->K, uniform);
+    int* out = &s->neighborhood[i * s->K];
+    sample_ints(s->npop, n_neighbors, false, uniform, out);
   }
 }
 
