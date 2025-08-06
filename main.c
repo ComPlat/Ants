@@ -1,5 +1,6 @@
 #include "pso.h"
 #include "calc_energy.h"
+#include "zmat2xyz.h"
 
 void write_xyz(const char* filename, const int* attyp, const double* coords, int natoms) {
   FILE* f = fopen(filename, "w");
@@ -26,44 +27,66 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   const char* file_name = argv[1];
-  const int natoms = 3;
-  const int attyp[3] = {8, 1, 1}; // O, H, H
-  const double coord[3 * 3] = {
-    0.0000,  0.0000,  0.0000,  // Oxygen
-    0.7586,  0.0000,  0.5043,  // Hydrogen 1
-   -0.7586,  0.0000,  0.5043   // Hydrogen 2
-  };
+  ZMatrix* zm = read_zmatrix(file_name);
+  if (!zm) {
+    fprintf(stderr, "Could not open file.\n");
+    return 1;
+  }
+
+  // Allocate and fill geo[3 x natoms]
+  double* geo = calloc(3 * zm->natoms, sizeof(double));
+  for (int i = 0; i < zm->natoms; i++) {
+    geo[0 * zm->natoms + i] = zm->bond_len[i];
+    geo[1 * zm->natoms + i] = zm->bond_ang[i];
+    geo[2 * zm->natoms + i] = zm->dihed_ang[i];
+  }
+
   double accuracy = 1.0;
   double electronic_temperature = 300.0;
   const int max_iter = 50;
   bool verbose = false;
   settings_loss_fct slf;
-  init_settings_loss_fct(&slf, natoms, attyp, electronic_temperature, accuracy, max_iter, verbose);
+  init_settings_loss_fct(&slf, zm->natoms, zm->atomic_numbers,
+                         zm->na, zm->nb, zm->nc,
+                         electronic_temperature, accuracy, max_iter, verbose);
+
   void* data = &slf;
-  double energy = calc_energy(coord, data);
+  double energy = calc_energy(geo, data);
   printf("GFN2-xTB single-point energy (H2O): %.10f Eh\n", energy);
 
-  double lb[] = {
-    -0.8, -0.8, -0.8,
-    -0.8, -0.8, -0.8,
-    -0.8, -0.8, -0.8
-  };
-  double ub[] = {
-    0.8, 0.8, 0.8,
-    0.8, 0.8, 0.8,
-    0.8, 0.8, 0.8
-  };
+  int natoms = zm->natoms;
+  int len = 3 * natoms;
+  double* lb = calloc(len, sizeof(double));
+  double* ub = calloc(len, sizeof(double));
+
+  for (int i = 0; i < natoms; i++) {
+    lb[0 * natoms + i] = 0.5;    // bond length lower bound
+    ub[0 * natoms + i] = 3.0;
+
+    lb[1 * natoms + i] = 30.0;   // bond angle lower bound
+    ub[1 * natoms + i] = 180.0;
+
+    lb[2 * natoms + i] = -180.0; // dihedral angle lower bound
+    ub[2 * natoms + i] = 180.0;
+  }
 
   Result res = {0};
   pso(lb, ub, 1000, 40, 9, -100, data, calc_energy, 1235, &res);
 
-  printf("[");
-  for (int i = 0; i < (natoms*3); i++) {
-    printf("%0.1f, ", res.parameters[i]);
-  }
-  printf("]\n");
-  write_xyz(file_name, attyp, res.parameters, natoms);
+   printf("[");
+   for (int i = 0; i < (zm->natoms*3); i++) {
+     printf("%0.1f, ", res.parameters[i]);
+   }
+   printf("]\n");
+
+  bool fail = gmetry(slf.natoms, res.parameters, slf.na, slf.nb, slf.nc, slf.coord);
+  if (fail) return 1;
+  write_xyz("Result.xyz", slf.attyp, slf.coord, slf.natoms);
 
   destroy_settings_loss_fct(&slf);
+  free(geo);
+  free_zmatrix(zm);
+  free(lb);
+  free(ub);
   return EXIT_SUCCESS;
 }
