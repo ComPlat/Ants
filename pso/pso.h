@@ -5,9 +5,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 #include "mersenne_twister.h"
 
-typedef double (*loss_fct) (const double* parameters, void* user_data);
+typedef double (*loss_fct) (double* parameters, void* user_data);
 
 typedef struct {
   double* parameters;

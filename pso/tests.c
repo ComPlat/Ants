@@ -4,7 +4,7 @@
 #include <assert.h>
 #include "pso.h"
 
-double sphere(const double* x, void* data) {
+double sphere(double* x, void* data) {
   int n = *(int*)data;
   double sum = 0.0;
   for (int i = 0; i < n; ++i) sum += x[i] * x[i];
