@@ -13,7 +13,7 @@ typedef double (*loss_fct) (double* parameters, void* user_data);
 
 typedef struct {
   int natoms;
-  const int* attyp;
+  int* attyp;
   xtb_TEnvironment env;
   xtb_TMolecule mol;
   xtb_TCalculator calc;
@@ -36,5 +36,7 @@ void init_settings_loss_fct(settings_loss_fct* slf, const int natoms, const int*
 void destroy_settings_loss_fct(settings_loss_fct* slf);
 
 double calc_energy(double* coord, void* data);
+
+double run_xtb_energy(double* coord, void* data);
 
 #endif // ! ANTS_CALC_ENERGY_H

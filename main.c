@@ -44,49 +44,52 @@ int main(int argc, char *argv[]) {
   double accuracy = 1.0;
   double electronic_temperature = 300.0;
   const int max_iter = 50;
-  bool verbose = false;
-  settings_loss_fct slf;
-  init_settings_loss_fct(&slf, zm->natoms, zm->atomic_numbers,
-                         zm->na, zm->nb, zm->nc,
-                         electronic_temperature, accuracy, max_iter, verbose);
+  bool verbose = true;
+  // settings_loss_fct slf;
+  // init_settings_loss_fct(&slf, zm->natoms, zm->atomic_numbers,
+  //                        zm->na, zm->nb, zm->nc,
+  //                        electronic_temperature, accuracy, max_iter, verbose);
 
-  void* data = &slf;
-  double energy = calc_energy(geo, data);
-  printf("GFN2-xTB single-point energy (H2O): %.10f Eh\n", energy);
+  void* data = zm;
+  // double energy = calc_energy(geo, data);
+  double energy = run_xtb_energy(geo, data);
+  printf("GFN2-xTB single-point energy: %8.6f Eh\n", energy);
 
-  int natoms = zm->natoms;
-  int len = 3 * natoms;
-  double* lb = calloc(len, sizeof(double));
-  double* ub = calloc(len, sizeof(double));
+  // int natoms = zm->natoms;
+  // int len = 3 * natoms;
+  // double* lb = calloc(len, sizeof(double));
+  // double* ub = calloc(len, sizeof(double));
+  //
+  // for (int i = 0; i < natoms; i++) {
+  //   lb[0 * natoms + i] = 0.5;    // bond length lower bound
+  //   ub[0 * natoms + i] = 3.0;
+  //
+  //   lb[1 * natoms + i] = geo[natoms + i]; // 30.0;   // bond angle lower bound
+  //   ub[1 * natoms + i] = geo[natoms + i]; //180.0;
+  //
+  //   lb[2 * natoms + i] = geo[(natoms*2) + i]; //-180.0; // dihedral angle lower bound
+  //   ub[2 * natoms + i] = geo[(natoms*2) + i]; // 180.0;
+  // }
+  //
+  // Result res = {0};
+  // pso(lb, ub, 150, 40, len, -100, data, calc_energy, 1234, &res);
+  //
+  // for (int i = 0; i < len; i++) {
+  //   if (i == 0) printf("Lengths: \n");
+  //   if (i == 8) printf("Angles: \n");
+  //   if (i == 17) printf("Dihedrals: \n");
+  //   printf("%8.3f vs. %8.3f, ", geo[i], res.parameters[i]);
+  //   if (i == 7 || i == 16 || i == (len - 1)) printf("\n");
+  // }
+  //
+  // bool fail = gmetry(slf.natoms, res.parameters, slf.na, slf.nb, slf.nc, slf.coord);
+  // if (fail) return 1;
+  // write_xyz("Result.xyz", slf.attyp, slf.coord, slf.natoms);
 
-  for (int i = 0; i < natoms; i++) {
-    lb[0 * natoms + i] = 0.5;    // bond length lower bound
-    ub[0 * natoms + i] = 3.0;
-
-    lb[1 * natoms + i] = 30.0;   // bond angle lower bound
-    ub[1 * natoms + i] = 180.0;
-
-    lb[2 * natoms + i] = -180.0; // dihedral angle lower bound
-    ub[2 * natoms + i] = 180.0;
-  }
-
-  Result res = {0};
-  pso(lb, ub, 1000, 40, 9, -100, data, calc_energy, 1235, &res);
-
-   printf("[");
-   for (int i = 0; i < (zm->natoms*3); i++) {
-     printf("%0.1f, ", res.parameters[i]);
-   }
-   printf("]\n");
-
-  bool fail = gmetry(slf.natoms, res.parameters, slf.na, slf.nb, slf.nc, slf.coord);
-  if (fail) return 1;
-  write_xyz("Result.xyz", slf.attyp, slf.coord, slf.natoms);
-
-  destroy_settings_loss_fct(&slf);
+  // destroy_settings_loss_fct(&slf);
   free(geo);
   free_zmatrix(zm);
-  free(lb);
-  free(ub);
+  // free(lb);
+  // free(ub);
   return EXIT_SUCCESS;
 }

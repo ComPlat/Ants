@@ -148,6 +148,50 @@ void update_swarm(Swarm*s, double w, double cog, double soc) {
   }
 }
 
+void safe_update_swarm(Swarm* s, double w, double cog, double soc,
+                       double* lb, double* ub,
+                       loss_fct lf, void* user_data) {
+  for (int i = 0; i < s->npop; i++) {
+    int* current_neighborhood = &s->neighborhood[i * s->K];
+    int best_particle = find_best_particle_in_neighborhood(s, i, current_neighborhood);
+
+    double* local_best = &s->swarm_bests_params[best_particle * s->npar];
+    double* personal_best = &s->swarm_bests_params[i * s->npar];
+    double* v_i = &s->v[i * s->npar];
+    double* x_i = &s->swarm[i * s->npar];
+
+    double backup_x[s->npar];
+    double backup_v[s->npar];
+    for (int j = 0; j < s->npar; j++) {
+      backup_x[j] = x_i[j];
+      backup_v[j] = v_i[j];
+    }
+
+    double r1 = uniform(-1, false) * 0.5;
+    double r2 = uniform(-1, false) * 0.5;
+
+    for (int j = 0; j < s->npar; j++) {
+      v_i[j] = w * v_i[j] + cog * r1 * (personal_best[j] - x_i[j]) + soc * r2 * (local_best[j] - x_i[j]);
+      x_i[j] += v_i[j];
+
+      // Clamp
+      if (x_i[j] < lb[j]) x_i[j] = lb[j];
+      if (x_i[j] > ub[j]) x_i[j] = ub[j];
+    }
+
+    double err = lf(x_i, user_data);
+    if (isinf(err) || isnan(err)) {
+      // Restore previous state
+      for (int j = 0; j < s->npar; j++) {
+        x_i[j] = backup_x[j];
+        v_i[j] = backup_v[j];
+      }
+    } else {
+      s->swarm_errors[i] = err;
+    }
+  }
+}
+
 void destroy_swarm(Swarm* s) {
   free(s->swarm); s->swarm = NULL;
   free(s->v); s->v = NULL;
@@ -201,9 +245,10 @@ void pso(double* lb, double* ub,
     w = w_max - iter * (w_max - w_min) / ngen;
     cog = initial_cog - (initial_cog - final_cog) * (iter + 1) / ngen;
     soc = initial_soc - (initial_soc - final_soc) * (iter + 1) / ngen;
-    update_swarm(s, w, cog, soc);
-    correct_parameters(lb, ub, s);
-    eval_swarm(s, user_data, lf);
+    // update_swarm(s, w, cog, soc);
+    // correct_parameters(lb, ub, s);
+    // eval_swarm(s, user_data, lf);
+    safe_update_swarm(s, w, cog, soc, lb, ub, lf, user_data);
     for (int i = 0; i < s->npop; i++) {
       if (s->swarm_errors[i] < s->swarm_bests[i]) {
         s->swarm_bests[i] = s->swarm_errors[i];

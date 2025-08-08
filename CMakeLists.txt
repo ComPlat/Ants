@@ -48,6 +48,7 @@ target_include_directories(pso
 target_link_directories(pso
   PUBLIC
   random
+  m
 )
 
 # main
@@ -103,4 +104,19 @@ add_custom_command(TARGET convert_tests POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_SOURCE_DIR}/convert/expected.xyz
     $<TARGET_FILE_DIR:convert_tests>/expected.xyz
+)
+
+# xtb test
+add_executable(xtb_test calc_energy/test_xtb_c_api.c)
+target_include_directories(xtb_test
+  PUBLIC
+  $ENV{HOME}/miniconda3/include
+)
+target_link_directories(xtb_test
+  PUBLIC
+  $ENV{HOME}/miniconda3/lib
+)
+target_link_libraries(xtb_test
+  PUBLIC
+  xtb gfortran m convert
 )
