@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "xtb.h"
-static double POS_INF = 1.0 /0.0;
+static double POS_INF = 1.0 / 0.0;
 
 typedef struct {
   int natoms;
@@ -24,40 +24,41 @@ Data init_data(int natoms, const int* attyp,
   return data;
 }
 
-double calc_energy(Data* data) {
+double calc_energy_and_gradient(Data* data, double** out_gradient) {
   xtb_TEnvironment env = xtb_newEnvironment();
   xtb_TCalculator calc = xtb_newCalculator();
   xtb_TResults res = xtb_newResults();
+  double energy = POS_INF;
+
   xtb_TMolecule mol = xtb_newMolecule(
     env, &(data->natoms), data->attyp, data->coord, &(data->charge), &(data->uhf), NULL, NULL);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return POS_INF;
-  }
 
-  xtb_setVerbosity(env,  XTB_VERBOSITY_MUTED);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return POS_INF;
-  }
+  if (xtb_checkEnvironment(env)) goto cleanup;
+
+  xtb_setVerbosity(env, XTB_VERBOSITY_MUTED);
+  if (xtb_checkEnvironment(env)) goto cleanup;
 
   xtb_loadGFN2xTB(env, mol, calc, NULL);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return POS_INF;
-  }
+  if (xtb_checkEnvironment(env)) goto cleanup;
 
   xtb_singlepoint(env, mol, calc, res);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return POS_INF;
-  }
+  if (xtb_checkEnvironment(env)) goto cleanup;
 
-  double energy = 0.0;
   xtb_getEnergy(env, res, &energy);
+  if (xtb_checkEnvironment(env)) goto cleanup;
+
+  *out_gradient = malloc(3 * data->natoms * sizeof(double));
+  xtb_getGradient(env, res, *out_gradient);
+  if (xtb_checkEnvironment(env)) goto cleanup;
+
+cleanup:
   if (xtb_checkEnvironment(env)) {
     xtb_showEnvironment(env, NULL);
-    return POS_INF;
+    energy = POS_INF;
+    if (*out_gradient != NULL) {
+      free(*out_gradient);
+      *out_gradient = NULL;
+    }
   }
 
   xtb_delResults(&res);
@@ -68,63 +69,7 @@ double calc_energy(Data* data) {
   return energy;
 }
 
-double* calc_gradient(Data* data) {
-  double* gradient = NULL;
-  xtb_TEnvironment env = xtb_newEnvironment();
-  xtb_TCalculator calc = xtb_newCalculator();
-  xtb_TResults res = xtb_newResults();
-  xtb_TMolecule mol = xtb_newMolecule(
-    env, &(data->natoms), data->attyp, data->coord, &(data->charge), &(data->uhf), NULL, NULL);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return gradient;
-  }
-
-  xtb_setVerbosity(env,  XTB_VERBOSITY_MUTED);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return gradient;
-  }
-
-  xtb_loadGFN2xTB(env, mol, calc, NULL);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return gradient;
-  }
-
-  xtb_singlepoint(env, mol, calc, res);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return gradient;
-  }
-
-  gradient = (double*) malloc(3 * data->natoms * sizeof(double));
-  xtb_getGradient(env, res, gradient);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return gradient;
-  }
-
-  xtb_delResults(&res);
-  xtb_delCalculator(&calc);
-  xtb_delMolecule(&mol);
-  xtb_delEnvironment(&env);
-
-  return gradient;
-}
-
-void backtrack(double* x, double* grad, double lr, double beta) {
-  while(true) {
-
-  }
-}
-
-double gradient_decent(double lr, double tol, int max_iter, double h) {
-
-}
-
-int main (int argc, char** argv) {
-
+int main(int argc, char** argv) {
   int    const natoms = 18;
   int    const attyp[18] = {6, 6, 6, 1, 1, 6, 1, 1, 6, 1, 1, 6, 1, 1, 1, 1, 1, 1};
   double const charge = 0.0;
@@ -148,15 +93,28 @@ int main (int argc, char** argv) {
     6.0567576610, 2.5147967551, -1.1393672182,
     3.6373853495, -1.6467100004, -1.0946783260,
     3.6474846664, -0.1909460021, 1.9683378620
-
   };
+
   Data data = init_data(natoms, attyp, coord, charge, uhf);
 
-  double energy = calc_energy(&data);
-  printf("%8.3f \n", energy);
-  double* gradient = calc_gradient(&data);
-  printf("%8.3f", gradient[0]);
+  double* gradient = NULL;
+  double energy = calc_energy_and_gradient(&data, &gradient);
 
-  free(gradient);
+  printf("Energy: %8.6f Eh\n", energy);
+  if (gradient != NULL) {
+    printf("Gradient vector per atom (Hartree/Bohr):\n");
+    for (int i = 0; i < data.natoms; ++i) {
+      printf("Atom %d (%2d): %12.6f %12.6f %12.6f\n",
+            i+1,
+            data.attyp[i],
+            gradient[3*i + 0],
+            gradient[3*i + 1],
+            gradient[3*i + 2]);
+    }
+
+
+    free(gradient);
+  }
+
   return 0;
 }
