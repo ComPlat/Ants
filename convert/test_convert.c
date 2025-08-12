@@ -1,4 +1,4 @@
-#include "zmat2xyz.h"
+#include "convert.h"
 #define TOL 1e-5
 
 bool compare_xyz(const char* filename, int natoms,

@@ -1,4 +1,4 @@
-#include "zmat2xyz.h"
+#include "convert.h"
 
 typedef struct {
   double* data;
