@@ -35,7 +35,7 @@ double calc_energy(Data* data) {
     return POS_INF;
   }
 
-  xtb_setVerbosity(env,  XTB_VERBOSITY_MUTED);
+  xtb_setVerbosity(env,  XTB_VERBOSITY_FULL);
   if (xtb_checkEnvironment(env)) {
     xtb_showEnvironment(env, NULL);
     return POS_INF;
@@ -113,23 +113,13 @@ double* calc_gradient(Data* data) {
   return gradient;
 }
 
-void backtrack(double* x, double* grad, double lr, double beta) {
-  while(true) {
-
-  }
-}
-
-double gradient_decent(double lr, double tol, int max_iter, double h) {
-
-}
-
 int main (int argc, char** argv) {
 
   int    const natoms = 18;
   int    const attyp[18] = {6, 6, 6, 1, 1, 6, 1, 1, 6, 1, 1, 6, 1, 1, 1, 1, 1, 1};
   double const charge = 0.0;
-  int    const uhf = 0;
-  double const coord[3*18] = {
+  int    const uhf = 0; // uhf: nrestricted harty fock --> number of unpaired electrons
+  double coord[3*18] = {
     0.0000000000, 0.0000000000, 0.0000000000,
     1.5517640000, 0.0000000000, 0.0000000000,
     -0.6214131653, 1.4212710069, 0.0000000000,
@@ -149,6 +139,11 @@ int main (int argc, char** argv) {
     1.9248779896, -0.8723317874, -0.5797090083,
     1.9302038454, -0.1010743891, 1.0410350959
   };
+  int len = 3*natoms;
+  for (int i = 0; i < len; i++) {
+    coord[i] = coord[i] * 1.8897259886;
+  }
+
   Data data = init_data(natoms, attyp, coord, charge, uhf);
 
   double energy = calc_energy(&data);

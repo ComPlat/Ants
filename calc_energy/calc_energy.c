@@ -1,7 +1,5 @@
 #include "calc_energy.h"
 
-static double POS_INF = 1.0 /0.0;
-
 void init_settings_loss_fct(settings_loss_fct* slf, const int natoms, const int* attyp,
                             int* na, int* nb, int* nc,
                             double electronic_temperature,
@@ -47,32 +45,21 @@ void destroy_settings_loss_fct(settings_loss_fct* slf) {
 double calc_energy(double* coord, void* data) {
   settings_loss_fct* slf = (settings_loss_fct*)data;
   bool fail = gmetry(slf->natoms, coord, slf->na, slf->nb, slf->nc, slf->coord);
-  for (int i = 0; i < slf->natoms; i++) {
-    printf("%d ", slf->attyp[i]); // correct
-  }
-  printf("\n");
-  for (int i = 0; i < (3*slf->natoms); i++) {
-    printf("%8.6f ", slf->coord[i]); // correct
-    if ((i + 1) % 3 == 0) printf("\n");
-  }
-  printf("\n");
   if (fail) {
-    return POS_INF;
+    return INFINITY;
+  }
+  for (int i = 0; i < (slf->natoms*3); i++) {
+    slf->coord[i] = slf->coord[i] * 1.8897259886;
   }
 
-  double const charge = 0.0; // cyclo hexan
-  int    const uhf = 0; // what is this???
+  double const charge = 0.0;
+  int    const uhf = 0;
   if (slf->mol == NULL) {
     slf->mol = xtb_newMolecule(
-      slf->env,
-      &slf->natoms,
-      slf->attyp,
-      slf->coord,
-      &charge,
-      // NULL, // const double* charge in e
-      &uhf,
-      // NULL, // const int* uhf
-      NULL, // const double* lattice[3][3]
+      slf->env, &slf->natoms, slf->attyp,
+      slf->coord, &charge, // NULL, // const double* charge in e
+      &uhf, // NULL, // const int* uhf
+      NULL, // const double* lattice[3][3],
       NULL // const bool* periodic [3]
     );
   } else {
@@ -90,43 +77,9 @@ double calc_energy(double* coord, void* data) {
       xtb_getError(slf->env, buffer, &bufsize);
       fprintf(stderr, "xTB Error: %s\n", buffer);
     }
-    return POS_INF;
+    return INFINITY;
   }
   double energy;
   xtb_getEnergy(slf->env, slf->res, &energy);
-  return energy;
-}
-
-
-double run_xtb_energy(double* coord, void* data) {
-  ZMatrix* zm = (ZMatrix*)data;
-  double* geo = calloc(3 * zm->natoms, sizeof(double));
-  bool fail = gmetry(zm->natoms, coord, zm->na, zm->nb, zm->nc, geo);
-  if (fail) {
-    return POS_INF;
-  }
-
-  double energy = 0.0;
-
-  xtb_TEnvironment env = xtb_newEnvironment();
-  xtb_TCalculator calc = xtb_newCalculator();
-  xtb_TResults res = xtb_newResults();
-
-  const int uhf = 0;
-  const double charge = 0.0;
-  xtb_TMolecule mol = xtb_newMolecule(env, &zm->natoms, zm->atomic_numbers, geo, &charge, &uhf, NULL, NULL);
-
-  xtb_loadGFN2xTB(env, mol, calc, NULL);
-  xtb_setVerbosity(env, XTB_VERBOSITY_MUTED);
-
-  xtb_singlepoint(env, mol, calc, res);
-  xtb_getEnergy(env, res, &energy);
-
-  xtb_delResults(&res);
-  xtb_delCalculator(&calc);
-  xtb_delMolecule(&mol);
-  xtb_delEnvironment(&env);
-  free(geo);
-
   return energy;
 }

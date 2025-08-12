@@ -5,9 +5,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 #include "xtb.h"
-#include "calc_energy.h"
-#include "zmat2xyz.h"
+#include "convert.h"
 
 typedef double (*loss_fct) (double* parameters, void* user_data);
 
@@ -36,7 +36,5 @@ void init_settings_loss_fct(settings_loss_fct* slf, const int natoms, const int*
 void destroy_settings_loss_fct(settings_loss_fct* slf);
 
 double calc_energy(double* coord, void* data);
-
-double run_xtb_energy(double* coord, void* data);
 
 #endif // ! ANTS_CALC_ENERGY_H
