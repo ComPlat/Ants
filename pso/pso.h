@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "mersenne_twister.h"
+#include "utils.h"
 
 typedef double (*loss_fct) (double* parameters, void* user_data);
 
