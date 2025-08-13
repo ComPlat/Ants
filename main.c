@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     ub[0 * natoms + i] = fmin(5.7, geo[i] * upper_lengths);
 
     // angles
-    lb[1 * natoms + i] = 0.52;
+    lb[1 * natoms + i] = 0.523599;
     ub[1 * natoms + i] = 3.05;
 
     // dihedrals
@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
   }
 
   Result res = {0};
-  const int npop = 4 + floor(3*log((double)(len)));
-  const int B = 50 * len;
+  const int npop = fmax(20, 4 + 2*len);
+  const int B = 250 * len;
   const int ngen = B / npop;
   pso(lb, ub, ngen, npop, len, -100, data, calc_energy, 1234, &res);
 

@@ -3,17 +3,6 @@ project(Ants)
 
 set(TEST_FILES_DIR "${CMAKE_SOURCE_DIR}/test_files")
 
-# Utils
-add_library(utils STATIC utils/utils.c)
-target_include_directories(utils
-  PUBLIC
-  ${CMAKE_SOURCE_DIR}/utils
-)
-target_link_libraries(utils
-  PUBLIC
-  m
-)
-
 # convert zmat2xyz
 add_library(convert STATIC convert/convert.c)
 target_include_directories(convert
@@ -59,7 +48,6 @@ target_include_directories(pso
 target_link_libraries(pso
   PUBLIC
   random
-  utils
   m
 )
 
@@ -82,7 +70,6 @@ target_link_libraries(Ants
   random
   calc_energy
   convert
-  utils
   xtb gfortran m
 )
 
@@ -96,7 +83,6 @@ target_include_directories(pso_tests
 target_link_libraries(pso_tests
   pso
   random
-  utils
 )
 
 # convert tests

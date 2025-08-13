@@ -1,5 +1,29 @@
 #include "pso.h"
 
+static void stats(const double *v, int n, double *m, double *sd) {
+  if (n <= 0) { *m = 0.0; *sd = 0.0; return; }
+
+  double best = v[0];
+  for (int i = 1; i < n; i++) if (v[i] < best) best = v[i];
+  const double denom = fabs(best) + 1e-12; // if best is 0.0
+
+  double sum = 0.0;
+  for (int i = 0; i < n; i++) sum += (v[i] - best) / denom;
+  const double mean = sum / (double) n;
+
+  double s = 0.0;
+  if (n > 1) {
+    for (int i = 0; i < n; i++) {
+      double r = (v[i] - best) / denom;
+      double d = r - mean;
+      s += d*d;
+    }
+    s /= (double)(n - 1);
+  }
+  *m = mean;
+  *sd = (n > 1) ? sqrt(s) : 0.0;
+}
+
 typedef struct {
   int npop;
   int npar;
@@ -27,12 +51,13 @@ static Swarm* init_empty_swarm() {
   return s;
 }
 
-static void check_allocation(Swarm*s) {
+static bool check_allocation(Swarm*s) {
   if (!s || !s->swarm || !s->v || !s->swarm_bests_params ||
     !s->swarm_bests || !s->swarm_errors || !s->neighborhood) {
     fprintf(stderr, "Failed to allocate swarm");
-    destroy_swarm(s);
+    return false;
   }
+  return true;
 }
 
 static Swarm* init_swarm(int npop, int npar) {
@@ -50,7 +75,10 @@ static Swarm* init_swarm(int npop, int npar) {
   s->swarm_errors  = (double*) calloc(s->npop, sizeof(double));
   s->neighborhood  = (int*)    calloc(s->size_neighberhood, sizeof(int));
 
-  check_allocation(s);
+  if (!check_allocation(s)) {
+    destroy_swarm(s);
+    return NULL;
+  }
 
   return s;
 }
@@ -203,14 +231,14 @@ void refresh_swarm(Swarm* s,
     tmp[i].idx = i; tmp[i].fit = s->swarm_bests[i];
   }
   qsort(tmp, s->npop, sizeof(RankItem), compare_rankitem);
-  int start = (int)floor(s->npop * 0.6);
+  int start = (int)floor(s->npop * 0.5);
   for (int t = start; t < s->npop; ++t) {
     int i = tmp[t].idx;
     // reinit particle i
     for (int j = 0; j < s->npar; j++) {
       double r = uniform(-1, false);
       s->swarm[i*s->npar + j] = lb[j] + r * (ub[j] - lb[j]);
-      s->v[i*s->npar + j] = 0.0;
+      s->v[i*s->npar + j] = 0.01 * (ub[j]-lb[j]) * (uniform(-1,false)-0.5);
       s->swarm_bests_params[i*s->npar + j] = s->swarm[i*s->npar + j];
     }
     // eval & set bests
@@ -246,9 +274,7 @@ void pso(double* lb, double* ub,
          int seed, Result* res) {
   uniform(seed, true);
   Swarm* s = init_swarm(npop, npar);
-  if (!s || !s->swarm || !s->v || !s->swarm_bests_params ||
-    !s->swarm_bests || !s->swarm_errors || !s->neighborhood) {
-    destroy_swarm(s);
+  if (!s) {
     return;
   }
 
@@ -289,7 +315,6 @@ void pso(double* lb, double* ub,
       }
     }
     int new_global_best = find_best_particle(s);
-    // TODO: check for NA and Inf
     if (s->swarm_errors[new_global_best] < global_best_error) {
       global_best_error = s->swarm_errors[new_global_best];
       global_best = new_global_best;
@@ -300,11 +325,11 @@ void pso(double* lb, double* ub,
     iter++;
     double mean, sd;
     stats(s->swarm_bests, npop, &mean, &sd);
-    printf("Generation: %d/%d, global best: %8.3f; rel mean/sd: %.2f%% / %.2f%%; Ratio: %8.3f \n",
+    printf("Generation: %d/%d, global best: %.3f; rel mean/sd: %.3f%% / %.3f%%; Ratio: %.3f \n",
            iter, ngen, global_best_error, 100.0*mean, 100.0*sd, (mean / sd));
     if (global_best_error <= error_threshold) break;
     double ratio = fabs(mean) / sd;
-    if (ratio > 5.0) { // is very aggressive maybe its better to use 5.0
+    if ((ratio > 2.5) || (no_improvement == 10)) {
       printf("Refresh part of the swarm \n");
       refresh_swarm(s, user_data, lf, lb, ub);
     }
