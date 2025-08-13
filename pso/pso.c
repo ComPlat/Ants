@@ -210,6 +210,7 @@ void refresh_swarm(Swarm* s,
     for (int j = 0; j < s->npar; j++) {
       double r = uniform(-1, false);
       s->swarm[i*s->npar + j] = lb[j] + r * (ub[j] - lb[j]);
+      s->v[i*s->npar + j] = 0.0;
       s->swarm_bests_params[i*s->npar + j] = s->swarm[i*s->npar + j];
     }
     // eval & set bests
@@ -217,7 +218,6 @@ void refresh_swarm(Swarm* s,
     s->swarm_errors[i] = lf(p, user_data);
     s->swarm_bests[i]  = s->swarm_errors[i];
   }
-  // TODO: maybe reset velocities???
   free(tmp);
 }
 
@@ -289,6 +289,7 @@ void pso(double* lb, double* ub,
       }
     }
     int new_global_best = find_best_particle(s);
+    // TODO: check for NA and Inf
     if (s->swarm_errors[new_global_best] < global_best_error) {
       global_best_error = s->swarm_errors[new_global_best];
       global_best = new_global_best;
@@ -303,7 +304,7 @@ void pso(double* lb, double* ub,
            iter, ngen, global_best_error, 100.0*mean, 100.0*sd, (mean / sd));
     if (global_best_error <= error_threshold) break;
     double ratio = fabs(mean) / sd;
-    if (ratio > 0.7) { // 0.7 is very aggressive maybe its better to use 5.0
+    if (ratio > 5.0) { // is very aggressive maybe its better to use 5.0
       printf("Refresh part of the swarm \n");
       refresh_swarm(s, user_data, lf, lb, ub);
     }

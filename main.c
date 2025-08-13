@@ -61,8 +61,8 @@ int main(int argc, char *argv[]) {
 
   const double lower_lengths = 0.9;
   const double upper_lengths = 1.1;
-  const double lower_dihedrals = 0.75;
-  const double upper_dihedrals = 1.25;
+  const double lower_dihedrals = 0.8;
+  const double upper_dihedrals = 1.2;
   for (int i = 0; i < natoms; i++) {
     // bond lengths
     lb[0 * natoms + i] = fmax(0.9, geo[i] * lower_lengths);
