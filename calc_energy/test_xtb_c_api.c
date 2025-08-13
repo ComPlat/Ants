@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "xtb.h"
-static double POS_INF = 1.0 /0.0;
+static double POS_INF = 1.0 / 0.0;
 
 typedef struct {
   int natoms;
@@ -24,40 +24,41 @@ Data init_data(int natoms, const int* attyp,
   return data;
 }
 
-double calc_energy(Data* data) {
+double calc_energy_and_gradient(Data* data, double** out_gradient) {
   xtb_TEnvironment env = xtb_newEnvironment();
   xtb_TCalculator calc = xtb_newCalculator();
   xtb_TResults res = xtb_newResults();
+  double energy = POS_INF;
+
   xtb_TMolecule mol = xtb_newMolecule(
     env, &(data->natoms), data->attyp, data->coord, &(data->charge), &(data->uhf), NULL, NULL);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return POS_INF;
-  }
 
-  xtb_setVerbosity(env,  XTB_VERBOSITY_FULL);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return POS_INF;
-  }
+  if (xtb_checkEnvironment(env)) goto cleanup;
+
+  xtb_setVerbosity(env, XTB_VERBOSITY_MUTED);
+  if (xtb_checkEnvironment(env)) goto cleanup;
 
   xtb_loadGFN2xTB(env, mol, calc, NULL);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return POS_INF;
-  }
+  if (xtb_checkEnvironment(env)) goto cleanup;
 
   xtb_singlepoint(env, mol, calc, res);
-  if (xtb_checkEnvironment(env)) {
-    xtb_showEnvironment(env, NULL);
-    return POS_INF;
-  }
+  if (xtb_checkEnvironment(env)) goto cleanup;
 
-  double energy = 0.0;
   xtb_getEnergy(env, res, &energy);
+  if (xtb_checkEnvironment(env)) goto cleanup;
+
+  *out_gradient = malloc(3 * data->natoms * sizeof(double));
+  xtb_getGradient(env, res, *out_gradient);
+  if (xtb_checkEnvironment(env)) goto cleanup;
+
+cleanup:
   if (xtb_checkEnvironment(env)) {
     xtb_showEnvironment(env, NULL);
-    return POS_INF;
+    energy = POS_INF;
+    if (*out_gradient != NULL) {
+      free(*out_gradient);
+      *out_gradient = NULL;
+    }
   }
 
   xtb_delResults(&res);
@@ -113,31 +114,30 @@ double* calc_gradient(Data* data) {
   return gradient;
 }
 
-int main (int argc, char** argv) {
-
+int main(int argc, char** argv) {
   int    const natoms = 18;
   int    const attyp[18] = {6, 6, 6, 1, 1, 6, 1, 1, 6, 1, 1, 6, 1, 1, 1, 1, 1, 1};
   double const charge = 0.0;
   int    const uhf = 0; // uhf: nrestricted harty fock --> number of unpaired electrons
   double coord[3*18] = {
     0.0000000000, 0.0000000000, 0.0000000000,
-    1.5517640000, 0.0000000000, 0.0000000000,
-    -0.6214131653, 1.4212710069, 0.0000000000,
-    -0.3202344715, -0.5777128156, 0.8955541160,
-    -0.4020743303, -0.5228367172, -0.8938873510,
-    0.1841653268, 2.3326703516, 0.9214999124,
-    -1.6903042651, 1.3588550321, 0.2933374010,
-    -0.5790544891, 1.8560721600, -1.0231949363,
-    1.6441078582, 2.4786929260, 0.4164114954,
-    0.1764956279, 1.8444387137, 1.9208853288,
-    -0.2736817304, 3.3394546876, 1.0355205414,
-    2.0956513638, 1.3275671641, -0.5201999921,
-    2.2911111163, 2.5382257523, 1.3198049476,
-    1.7800601271, 3.4231195994, -0.1525003770,
-    1.6822536598, 1.4825678003, -1.5413943753,
-    3.2027057981, 1.3293805938, -0.6032940337,
-    1.9248779896, -0.8723317874, -0.5797090083,
-    1.9302038454, -0.1010743891, 1.0410350959
+    2.9322094206, 0.0000000000, 0.0000000000,
+    -1.1742394969, 2.6864456722, 0.0000000000,
+    -0.6051014872, -1.0919282327, 1.6924507605,
+    -0.7595265229, -0.9882521577, -1.6896416115,
+    0.3479268993, 4.4070164168, 1.7406633633,
+    -3.1856271240, 2.5656796203, 0.5541491550,
+    -1.0942653918, 3.5070543555, -1.9341932218,
+    3.1071060664, 4.6862491743, 0.7881920978,
+    0.3334160410, 3.4840279798, 3.6273863886,
+    -0.5169672863, 6.3093502430, 1.9575489272,
+    3.9651154386, 2.5172269236, -0.9824517572,
+    4.3284345078, 4.7931151837, 2.4931262597,
+    3.3636550613, 6.4705907998, -0.2880493804,
+    3.1794030178, 2.8029736653, -2.9133563500,
+    6.0567576610, 2.5147967551, -1.1393672182,
+    3.6373853495, -1.6467100004, -1.0946783260,
+    3.6474846664, -0.1909460021, 1.9683378620
   };
   int len = 3*natoms;
   for (int i = 0; i < len; i++) {
@@ -146,11 +146,24 @@ int main (int argc, char** argv) {
 
   Data data = init_data(natoms, attyp, coord, charge, uhf);
 
-  double energy = calc_energy(&data);
-  printf("%8.3f \n", energy);
-  double* gradient = calc_gradient(&data);
-  printf("%8.3f", gradient[0]);
+  double* gradient = NULL;
+  double energy = calc_energy_and_gradient(&data, &gradient);
 
-  free(gradient);
+  printf("Energy: %8.6f Eh\n", energy);
+  if (gradient != NULL) {
+    printf("Gradient vector per atom (Hartree/Bohr):\n");
+    for (int i = 0; i < data.natoms; ++i) {
+      printf("Atom %d (%2d): %12.6f %12.6f %12.6f\n",
+             i+1,
+             data.attyp[i],
+             gradient[3*i + 0],
+             gradient[3*i + 1],
+             gradient[3*i + 2]);
+    }
+
+
+    free(gradient);
+  }
+
   return 0;
 }
