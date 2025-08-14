@@ -20,11 +20,11 @@ target_include_directories(calc_energy
   PUBLIC
   ${CMAKE_SOURCE_DIR}/calc_energy
   ${CMAKE_SOURCE_DIR}/convert
-  $ENV{HOME}/miniconda3/include
+  $ENV{HOME}/micromamba/include
 )
 target_link_directories(calc_energy
   PUBLIC
-  $ENV{HOME}/miniconda3/lib
+  $ENV{HOME}/micromamba/lib
 )
 target_link_libraries(calc_energy
   PUBLIC
@@ -60,11 +60,11 @@ add_executable(Ants main.c)
 target_include_directories(Ants
   PUBLIC
   ${CMAKE_SOURCE_DIR}
-  $ENV{HOME}/miniconda3/include
+  $ENV{HOME}/micromamba/include
 )
 target_link_directories(Ants
   PUBLIC
-  $ENV{HOME}/miniconda3/lib
+  $ENV{HOME}/micromamba/lib
   ${CMAKE_SOURCE_DIR}/random
   ${CMAKE_SOURCE_DIR}/optim
   ${CMAKE_SOURCE_DIR}/convert
@@ -115,13 +115,14 @@ add_custom_command(TARGET convert_tests POST_BUILD
 add_executable(xtb_test calc_energy/test_xtb_c_api.c)
 target_include_directories(xtb_test
   PUBLIC
-  $ENV{HOME}/miniconda3/include
+  $ENV{HOME}/micromamba/include
 )
 target_link_directories(xtb_test
   PUBLIC
-  $ENV{HOME}/miniconda3/lib
+  $ENV{HOME}/micromamba/lib
 )
 target_link_libraries(xtb_test
   PUBLIC
+  convert gfortran m xtb
   xtb gfortran m convert
 )
