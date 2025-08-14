@@ -83,3 +83,46 @@ double calc_energy(double* coord, void* data) {
   xtb_getEnergy(slf->env, slf->res, &energy);
   return energy;
 }
+
+void calc_energy_and_grad(double* coord, double* energy, double* gradient, bool calc_grad, void* data) {
+  settings_loss_fct* slf = (settings_loss_fct*)data;
+  bool fail = gmetry(slf->natoms, coord, slf->na, slf->nb, slf->nc, slf->coord);
+  if (fail) {
+    *energy = INFINITY;
+  }
+  for (int i = 0; i < (slf->natoms*3); i++) {
+    slf->coord[i] = slf->coord[i] * 1.8897259886;
+  }
+
+  double const charge = 0.0;
+  int    const uhf = 0;
+  if (slf->mol == NULL) {
+    slf->mol = xtb_newMolecule(
+      slf->env, &slf->natoms, slf->attyp,
+      slf->coord, &charge, // NULL, // const double* charge in e
+      &uhf, // NULL, // const int* uhf
+      NULL, // const double* lattice[3][3],
+      NULL // const bool* periodic [3]
+    );
+  } else {
+    xtb_updateMolecule(slf->env, slf->mol, slf->coord, NULL);
+  }
+  xtb_loadGFN2xTB(slf->env, slf->mol, slf->calc, NULL);
+  xtb_setAccuracy(slf->env, slf->calc, slf->accuracy);
+  xtb_setElectronicTemp(slf->env, slf->calc, slf->electronic_temperature);
+  xtb_setMaxIter(slf->env, slf->calc, slf->max_iter);
+  xtb_singlepoint(slf->env, slf->mol, slf->calc, slf->res);
+  if(xtb_checkEnvironment(slf->env)) {
+    if (slf->verbose) {
+      char buffer[512];
+      int bufsize = 512;
+      xtb_getError(slf->env, buffer, &bufsize);
+      fprintf(stderr, "xTB Error: %s\n", buffer);
+    }
+    *energy = INFINITY;
+  }
+  xtb_getEnergy(slf->env, slf->res, energy);
+  if (calc_grad) {
+    xtb_getGradient(slf->env, slf->res, gradient);
+  }
+}

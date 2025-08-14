@@ -38,14 +38,18 @@ target_include_directories(random
   ${CMAKE_SOURCE_DIR}/random
 )
 
-# pso
-add_library(pso STATIC pso/pso.c)
-target_include_directories(pso
+# Optim
+add_library(optim
+  STATIC
+  optim/gradient_descent.c
+  optim/pso.c
+)
+target_include_directories(optim
   PUBLIC
   ${CMAKE_SOURCE_DIR}/random
-  ${CMAKE_SOURCE_DIR}/pso
+  ${CMAKE_SOURCE_DIR}/optim
 )
-target_link_libraries(pso
+target_link_libraries(optim
   PUBLIC
   random
   m
@@ -62,11 +66,12 @@ target_link_directories(Ants
   PUBLIC
   $ENV{HOME}/miniconda3/lib
   ${CMAKE_SOURCE_DIR}/random
+  ${CMAKE_SOURCE_DIR}/optim
   ${CMAKE_SOURCE_DIR}/convert
 )
 target_link_libraries(Ants
   PUBLIC
-  pso
+  optim
   random
   calc_energy
   convert
@@ -74,14 +79,14 @@ target_link_libraries(Ants
 )
 
 # pso tests
-add_executable(pso_tests pso/tests.c)
+add_executable(pso_tests optim/pso_tests.c)
 target_include_directories(pso_tests
   PUBLIC
   ${CMAKE_SOURCE_DIR}/xtb
   ${CMAKE_SOURCE_DIR}/pso
 )
 target_link_libraries(pso_tests
-  pso
+  optim
   random
 )
 

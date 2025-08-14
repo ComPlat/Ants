@@ -37,4 +37,6 @@ void destroy_settings_loss_fct(settings_loss_fct* slf);
 
 double calc_energy(double* coord, void* data);
 
+void calc_energy_and_grad(double* coord, double* energy, double* gradient, bool calc_grad, void* data);
+
 #endif // ! ANTS_CALC_ENERGY_H

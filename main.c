@@ -1,6 +1,7 @@
 #include "pso.h"
 #include "calc_energy.h"
 #include "convert.h"
+#include "gradient_descent.h"
 
 void write_xyz(const char* filename, const int* attyp, const double* coords, int natoms) {
   FILE* f = fopen(filename, "w");
@@ -19,6 +20,40 @@ void write_xyz(const char* filename, const int* attyp, const double* coords, int
     fprintf(f, "%d %.10f %.10f %.10f\n", z, x, y, zc);
   }
   fclose(f);
+}
+
+void run_optim(double* geo, double* lb, double* ub,
+               const int len, const int natoms, void* data, Result* res) {
+  const double lower_lengths = 0.8;
+  const double upper_lengths = 1.2;
+  const double lower_angles = 0.8;
+  const double upper_angles = 1.2;
+  const double lower_dihedrals = 0.8;
+  const double upper_dihedrals = 1.2;
+  for (int i = 0; i < natoms; i++) {
+    printf("%8.6f, %8.6f, %8.6f\n", geo[i], geo[natoms + i], geo[(natoms*2) + i]);
+    // bond lengths
+    lb[0 * natoms + i] = fmax(0.9, geo[i] * lower_lengths);
+    ub[0 * natoms + i] = fmin(5.7, geo[i] * upper_lengths);
+
+    // angles
+    lb[1 * natoms + i] = fmax(0.523599, geo[natoms + i] * lower_angles);
+    ub[1 * natoms + i] = fmin(3.05, geo[natoms + i] * upper_angles);
+
+    // dihedrals
+    lb[2 * natoms + i] = fmax(-M_PI, geo[(natoms*2) + i]*lower_dihedrals);
+    ub[2 * natoms + i] = fmin(M_PI, geo[(natoms*2) + i]*upper_dihedrals);
+  }
+
+  const int npop = 20;
+  const int ngen = 20;
+  pso(lb, ub, ngen, npop, len, -100, data, calc_energy, 1234, res);
+  const double lr = 0.1;
+  const double beta = 0.9;
+  const double tol = 1e-15;
+  const int max_iter_optim = 1000;
+  const int check = gradient_descent(calc_energy_and_grad,
+                                     res->parameters, len, lr, beta, tol, max_iter_optim, data, res);
 }
 
 int main(int argc, char *argv[]) {
@@ -59,29 +94,11 @@ int main(int argc, char *argv[]) {
   double* lb = (double*) calloc(len, sizeof(double));
   double* ub = (double*) calloc(len, sizeof(double));
 
-  const double lower_lengths = 0.9;
-  const double upper_lengths = 1.1;
-  const double lower_dihedrals = 0.8;
-  const double upper_dihedrals = 1.2;
-  for (int i = 0; i < natoms; i++) {
-    // bond lengths
-    lb[0 * natoms + i] = fmax(0.9, geo[i] * lower_lengths);
-    ub[0 * natoms + i] = fmin(5.7, geo[i] * upper_lengths);
-
-    // angles
-    lb[1 * natoms + i] = 0.523599;
-    ub[1 * natoms + i] = 3.05;
-
-    // dihedrals
-    lb[2 * natoms + i] = fmax(-M_PI, geo[(natoms*2) + i]*lower_dihedrals);
-    ub[2 * natoms + i] = fmin(M_PI, geo[(natoms*2) + i]*upper_dihedrals);
-  }
-
   Result res = {0};
-  const int npop = fmax(20, 4 + 2*len);
-  const int B = 250 * len;
-  const int ngen = B / npop;
-  pso(lb, ub, ngen, npop, len, -100, data, calc_energy, 1234, &res);
+  run_optim(geo, lb, ub, len, natoms, data, &res);
+  for (int i = 0; i < 10; i++) {
+    run_optim(res.parameters, lb, ub, len, natoms, data, &res);
+  }
 
   bool fail = gmetry(slf.natoms, res.parameters, slf.na, slf.nb, slf.nc, slf.coord);
   if (fail) {
